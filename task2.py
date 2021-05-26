@@ -1,7 +1,7 @@
 import csv
 import itertools
 import numpy as np
-import panda as pd
+import pandas as pd
 
 
 def read_csv_file(file_name):
@@ -89,3 +89,56 @@ def apriori(minsup, minconf, minlift, file_name):
 
 不记录所有有的 transaction 的排列组合，要逐个检查计数来计算 support，防止内存溢出。
 """
+
+def apriori_2(minsup, minconf, minlift, file_name):
+    data = read_csv_file(file_name)
+
+    # get unique items
+    whole_data = np.concatenate(data)
+    unique_items_counts = np.unique(whole_data, return_counts=True)
+    unique_items = unique_items_counts[0]
+    itemset_max_length = len(unique_items)
+    
+    # find frequent itemsets
+    tran_num = len(data)
+    freq_itemsets = []
+    infreq_itemsets = []
+    for itemset_length in range(1, itemset_max_length + 1):
+        combs = list(itertools.combinations(unique_items, itemset_length))
+        for comb in combs:
+            for infreq_itemset in infreq_itemsets:
+                if set(comb).issubset(set(infreq_itemset)):
+                    continue
+            support_count = 0
+            for transaction in data:
+                if set(comb).issubset(set(transaction)):
+                    support_count += 1
+            support = support_count / tran_num
+            if support > minsup:
+                freq_itemsets.append(comb)
+            else:
+                infreq_itemsets.append(comb)
+    print(freq_itemsets)
+    print(len(freq_itemsets))
+
+
+    
+
+
+apriori_2(0.15, 0, 0, "task1.csv")
+
+
+"""
+TEST SECTION
+"""
+
+# a = np.array([[1, 2]], dtype=object)
+# b = np.array([[1, 2, 3]], dtype=object)
+# c = np.concatenate((a, b), axis=0, dtype=object)
+# print(c)
+# d = np.append(a, b, axis=0)
+# print(d)
+
+# a = set([1, 2])
+# b = set(np.array([2, 1, 3]))
+# print(a.issubset(b))
