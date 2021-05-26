@@ -4,11 +4,13 @@ import numpy as np
 import pandas as pd
 
 
-def read_csv_file(file_name):
+def read_csv_file(file_name, remove_last):
     items = []
     with open(file_name) as file:
         reader = csv.reader(file, delimiter=",")
         for row in reader:
+            if remove_last:
+                row = row[:-1]
             items.append(np.array(row))
     items = np.array(items, dtype=list)
     return items
@@ -82,16 +84,9 @@ def apriori(minsup, minconf, minlift, file_name):
 # apriori(0.15, 0, 0, "supermarket_less.csv")
 # apriori(0.15, 0, 0, "task1.csv")
 
-"""
-不记录所有的排列组合。
-先找出 unique item，组成只有一个 item 的 itemset，然后检查 support，记录 infrequent itemset 和 frequent itemset。
-生成排列组合，移除包含 infrequent itemset 的组合。检查 support，记录 。。。
 
-不记录所有有的 transaction 的排列组合，要逐个检查计数来计算 support，防止内存溢出。
-"""
-
-def apriori_2(minsup, minconf, minlift, file_name):
-    data = read_csv_file(file_name)
+def apriori_2(minsup, minconf, minlift, file_name, remove_last):
+    data = read_csv_file(file_name, remove_last)
 
     # get unique items
     whole_data = np.concatenate(data)
@@ -103,29 +98,54 @@ def apriori_2(minsup, minconf, minlift, file_name):
     tran_num = len(data)
     freq_itemsets = []
     infreq_itemsets = []
+    itemset_support_count_dict = {}
     for itemset_length in range(1, itemset_max_length + 1):
         combs = list(itertools.combinations(unique_items, itemset_length))
         for comb in combs:
+            comb = frozenset(comb)
+            frequent = True
             for infreq_itemset in infreq_itemsets:
                 if set(comb).issubset(set(infreq_itemset)):
-                    continue
-            support_count = 0
-            for transaction in data:
-                if set(comb).issubset(set(transaction)):
-                    support_count += 1
-            support = support_count / tran_num
-            if support > minsup:
-                freq_itemsets.append(comb)
-            else:
-                infreq_itemsets.append(comb)
-    print(freq_itemsets)
-    print(len(freq_itemsets))
+                    frequent = False
+            if frequent:
+                support_count = 0
+                for transaction in data:
+                    if comb.issubset(transaction):
+                        support_count += 1
+                support = support_count / tran_num
+                itemset_support_count_dict[comb] = support
+                if support > minsup:
+                    freq_itemsets.append(comb)
+                else:
+                    infreq_itemsets.append(comb)
 
-
+    # find rules
+    # rules = []
+    # all_subsets = np.array([])
+    # for itemset in freq_itemsets:
+    #     print("=" * 100)
+    #     print(itemset)
+    #     subsets = all_subsets.copy()
+    #     for subset in subsets:
+    #         print("    ", subset)
+    #         if subset.issubset(itemset):
+    #             conf = itemset_support_count_dict[itemset] / itemset_support_count_dict[itemset - subset]
+    #             rule = (itemset - subset, subset, conf)
+    #             if conf >= minconf and rule not in rules:
+    #                 rules.append(rule)
+    #                 print("        ", rule)
+    #             else:
+    #                 subsets = subsets[(subset.issubset(subsets))]
+    #                 print("Pruned here:", subsets)
+    #     all_subsets = np.append(all_subsets, itemset)
     
+    # print(len(rules))
 
 
-apriori_2(0.15, 0, 0, "task1.csv")
+
+# apriori_2(0.5, 0, 0, "small_supermarket.csv", True)
+apriori_2(0.15, 0.8, 0, "task1.csv", False)
+
 
 
 """
@@ -142,3 +162,22 @@ TEST SECTION
 # a = set([1, 2])
 # b = set(np.array([2, 1, 3]))
 # print(a.issubset(b))
+
+# a = frozenset([1, 2]) - frozenset([1])
+# b = {a: 1}
+# print(a)
+
+# a = np.array([frozenset([1])])
+# b = frozenset([1])
+# c = np.append(a, b)
+# print(c)
+
+# a = np.array([(2)])
+# b = (1, 2)
+# c = np.append(a, b)
+# print(c)
+
+a = np.array([frozenset([1])])
+b = frozenset([1,2,3])
+c = np.append(a, b)
+print(c)
